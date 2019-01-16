@@ -7,7 +7,8 @@
  * Copyright 2017-2018 XMR-Stak    <https://github.com/fireice-uk>, <https://github.com/psychocrypt>
  * Copyright 2018      Lee Clagett <https://github.com/vtnerd>
  * Copyright 2018      SChernykh   <https://github.com/SChernykh>
- * Copyright 2016-2018 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
+ * Copyright 2016-2019 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
+ * Copyright 2018-2019 MoneroOcean <https://github.com/MoneroOcean>, <support@moneroocean.stream>
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -62,6 +63,8 @@ static AlgoData const algorithms[] = {
     { "cryptonight/xao",       "cn/xao",       xmrig::CRYPTONIGHT,       xmrig::VARIANT_XAO  },
     { "cryptonight/rto",       "cn/rto",       xmrig::CRYPTONIGHT,       xmrig::VARIANT_RTO  },
     { "cryptonight/2",         "cn/2",         xmrig::CRYPTONIGHT,       xmrig::VARIANT_2    },
+    { "cryptonight/half",      "cn/half",      xmrig::CRYPTONIGHT,       xmrig::VARIANT_HALF },
+    { "cryptonight/xtlv9",     "cn/xtlv9",     xmrig::CRYPTONIGHT,       xmrig::VARIANT_HALF },
 
 #   ifndef XMRIG_NO_AEON
     { "cryptonight-lite",      "cn-lite",      xmrig::CRYPTONIGHT_LITE,  xmrig::VARIANT_AUTO },
@@ -109,7 +112,11 @@ static const char *variants[] = {
     "xao",
     "rto",
     "2",
+    "half"
 };
+
+
+static_assert(xmrig::VARIANT_MAX == ARRAY_SIZE(variants), "variants size mismatch");
 
 
 bool xmrig::Algorithm::isValid() const
@@ -144,8 +151,14 @@ void xmrig::Algorithm::parseAlgorithm(const char *algo)
     m_variant = VARIANT_AUTO;
 
     assert(algo != nullptr);
-    if (algo == nullptr) {
+    if (algo == nullptr || strlen(algo) < 1) {
         return;
+    }
+
+    if (*algo == '!') {
+        m_flags |= Forced;
+
+        return parseAlgorithm(algo + 1);
     }
 
     for (size_t i = 0; i < ARRAY_SIZE(algorithms); i++) {
@@ -166,11 +179,25 @@ void xmrig::Algorithm::parseVariant(const char *variant)
 {
     m_variant = VARIANT_AUTO;
 
+    if (variant == nullptr || strlen(variant) < 1) {
+        return;
+    }
+
+    if (*variant == '!') {
+        m_flags |= Forced;
+
+        return parseVariant(variant + 1);
+    }
+
     for (size_t i = 0; i < ARRAY_SIZE(variants); i++) {
         if (strcasecmp(variant, variants[i]) == 0) {
             m_variant = static_cast<Variant>(i);
-            break;
+            return;
         }
+    }
+
+    if (strcasecmp(variant, "xtlv9") == 0) {
+        m_variant = VARIANT_HALF;
     }
 }
 
@@ -237,4 +264,61 @@ const char *xmrig::Algorithm::name(bool shortName) const
     }
 
     return "invalid";
+}
+
+
+// returns string name of the PerfAlgo
+const char *xmrig::Algorithm::perfAlgoName(const xmrig::PerfAlgo pa) {
+    static const char* perf_algo_names[xmrig::PerfAlgo::PA_MAX] = {
+        "cn",
+        "cn/2",
+        "cn/half",
+        "cn-lite",
+        "cn-heavy",
+    };
+    return perf_algo_names[pa];
+}
+
+// constructs Algorithm from PerfAlgo
+xmrig::Algorithm::Algorithm(const xmrig::PerfAlgo pa) {
+    switch (pa) {
+       case PA_CN:
+           m_algo    = xmrig::CRYPTONIGHT;
+           m_variant = xmrig::VARIANT_1;
+           break;
+       case PA_CN2:
+           m_algo    = xmrig::CRYPTONIGHT;
+           m_variant = xmrig::VARIANT_2;
+           break;
+       case PA_CN_HALF:
+           m_algo    = xmrig::CRYPTONIGHT;
+           m_variant = xmrig::VARIANT_HALF;
+           break;
+       case PA_CN_LITE:
+           m_algo    = xmrig::CRYPTONIGHT_LITE;
+           m_variant = xmrig::VARIANT_1;
+           break;
+       case PA_CN_HEAVY:
+           m_algo    = xmrig::CRYPTONIGHT_HEAVY;
+           m_variant = xmrig::VARIANT_0;
+           break;
+       default:
+           m_algo    = xmrig::INVALID_ALGO;
+           m_variant = xmrig::VARIANT_AUTO;
+    }
+}
+
+// returns PerfAlgo that corresponds to current Algorithm
+xmrig::PerfAlgo xmrig::Algorithm::perf_algo() const {
+    switch (m_algo) {
+       case CRYPTONIGHT:
+           switch (m_variant) {
+               case VARIANT_2:    return PA_CN2;
+               case VARIANT_HALF: return PA_CN_HALF;
+               default:           return PA_CN;
+           }
+       case CRYPTONIGHT_LITE:  return PA_CN_LITE;
+       case CRYPTONIGHT_HEAVY: return PA_CN_HEAVY;
+       default: return PA_INVALID;
+    }
 }

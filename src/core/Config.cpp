@@ -6,6 +6,7 @@
  * Copyright 2016      Jay D Dee   <jayddee246@gmail.com>
  * Copyright 2017-2018 XMR-Stak    <https://github.com/fireice-uk>, <https://github.com/psychocrypt>
  * Copyright 2016-2018 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
+ * Copyright 2018 MoneroOcean      <https://github.com/MoneroOcean>, <support@moneroocean.stream>
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -37,6 +38,10 @@
 #include "rapidjson/prettywriter.h"
 #include "workers/CpuThread.h"
 
+// for usage in Client::login to get_algo_perf
+namespace xmrig {
+    Config* pconfig = nullptr;
+};
 
 static char affinity_tmp[20] = { 0 };
 
@@ -51,6 +56,11 @@ xmrig::Config::Config() : xmrig::CommonConfig(),
     m_maxCpuUsage(75),
     m_priority(-1)
 {
+    // not defined algo performance is considered to be 0
+    for (int a = 0; a != xmrig::PerfAlgo::PA_MAX; ++ a) {
+        const xmrig::PerfAlgo pa = static_cast<xmrig::PerfAlgo>(a);
+        m_algo_perf[pa] = 0.0f;
+    }
 }
 
 
@@ -115,18 +125,36 @@ void xmrig::Config::getJSON(rapidjson::Document &doc) const
     doc.AddMember("retry-pause",   retryPause(), allocator);
     doc.AddMember("safe",          m_safe, allocator);
 
-    if (threadsMode() != Simple) {
-        Value threads(kArrayType);
+    // save extended "threads" based on m_threads
+    Value threads(kObjectType);
+    for (int a = 0; a != xmrig::Algo::ALGO_MAX; ++ a) {
+        const xmrig::Algo algo = static_cast<xmrig::Algo>(a);
+        Value key(xmrig::Algorithm::perfAlgoName(xmrig::Algorithm(algo).perf_algo()), allocator);
+        if (threadsMode(algo) != Simple) {
+            Value threads2(kArrayType);
+            for (const IThread *thread : m_threads[algo].list) {
+                threads2.PushBack(thread->toConfig(doc), allocator);
+            }
 
-        for (const IThread *thread : m_threads.list) {
-            threads.PushBack(thread->toConfig(doc), allocator);
+            threads.AddMember(key, threads2, allocator);
         }
+        else {
+            threads.AddMember(key, threadsCount(), allocator);
+        }
+    }
+    doc.AddMember("threads", threads, allocator);
 
-        doc.AddMember("threads", threads, allocator);
+    // save "algo-perf" based on m_algo_perf
+    Value algo_perf(kObjectType);
+    for (int a = 0; a != xmrig::PerfAlgo::PA_MAX; ++ a) {
+        const xmrig::PerfAlgo pa = static_cast<xmrig::PerfAlgo>(a);
+        Value key(xmrig::Algorithm::perfAlgoName(pa), allocator);
+        algo_perf.AddMember(key, Value(m_algo_perf[pa]), allocator);
     }
-    else {
-        doc.AddMember("threads", threadsCount(), allocator);
-    }
+    doc.AddMember("algo-perf", algo_perf, allocator);
+
+    doc.AddMember("calibrate-algo", isCalibrateAlgo(), allocator);
+    doc.AddMember("calibrate-algo-time", calibrateAlgoTime(), allocator);
 
     doc.AddMember("user-agent", userAgent() ? Value(StringRef(userAgent())).Move() : Value(kNullType).Move(), allocator);
 
@@ -154,37 +182,39 @@ bool xmrig::Config::finalize()
         return false;
     }
 
-    if (!m_threads.cpu.empty()) {
-        m_threads.mode     = Advanced;
-        const bool softAES = (m_aesMode == AES_AUTO ? (Cpu::info()->hasAES() ? AES_HW : AES_SOFT) : m_aesMode) == AES_SOFT;
+    // auto configure m_threads
+    for (int a = 0; a != xmrig::Algo::ALGO_MAX; ++ a) {
+        const xmrig::Algo algo = static_cast<xmrig::Algo>(a);
+        if (!m_threads[algo].cpu.empty()) {
+            m_threads[algo].mode = Advanced;
+            const bool softAES = (m_aesMode == AES_AUTO ? (Cpu::info()->hasAES() ? AES_HW : AES_SOFT) : m_aesMode) == AES_SOFT;
+            for (size_t i = 0; i < m_threads[algo].cpu.size(); ++i) {
+                m_threads[algo].list.push_back(CpuThread::createFromData(i, algo, m_threads[algo].cpu[i], m_priority, softAES));
+            }
+        } else {
+            const AlgoVariant av = getAlgoVariant();
+            m_threads[algo].mode = m_threads[algo].count ? Simple : Automatic;
 
-        for (size_t i = 0; i < m_threads.cpu.size(); ++i) {
-            m_threads.list.push_back(CpuThread::createFromData(i, m_algorithm.algo(), m_threads.cpu[i], m_priority, softAES));
+            const size_t size = CpuThread::multiway(av) * cn_select_memory(algo) / 1024;
+
+            if (!m_threads[algo].count) {
+                m_threads[algo].count = Cpu::info()->optimalThreadsCount(size, m_maxCpuUsage);
+            }
+            else if (m_safe) {
+                const size_t count = Cpu::info()->optimalThreadsCount(size, m_maxCpuUsage);
+                if (m_threads[algo].count > count) {
+                    m_threads[algo].count = count;
+                }
+            }
+
+            for (size_t i = 0; i < m_threads[algo].count; ++i) {
+                m_threads[algo].list.push_back(CpuThread::createFromAV(i, algo, av, m_threads[algo].mask, m_priority, m_assembly));
+            }
+
+            m_shouldSave = m_shouldSave || m_threads[algo].mode == Automatic;
         }
-
-        return true;
     }
 
-    const AlgoVariant av = getAlgoVariant();   
-    m_threads.mode = m_threads.count ? Simple : Automatic;
-
-    const size_t size = CpuThread::multiway(av) * cn_select_memory(m_algorithm.algo()) / 1024;
-
-    if (!m_threads.count) {
-        m_threads.count = Cpu::info()->optimalThreadsCount(size, m_maxCpuUsage);
-    }
-    else if (m_safe) {
-        const size_t count = Cpu::info()->optimalThreadsCount(size, m_maxCpuUsage);
-        if (m_threads.count > count) {
-            m_threads.count = count;
-        }
-    }
-
-    for (size_t i = 0; i < m_threads.count; ++i) {
-        m_threads.list.push_back(CpuThread::createFromAV(i, m_algorithm.algo(), av, m_threads.mask, m_priority, m_assembly));
-    }
-
-    m_shouldSave = m_threads.mode == Automatic;
     return true;
 }
 
@@ -242,7 +272,7 @@ bool xmrig::Config::parseString(int key, const char *arg)
 
     case ThreadsKey:  /* --threads */
         if (strncmp(arg, "all", 3) == 0) {
-            m_threads.count = Cpu::info()->threads();
+            m_threads[m_algorithm.algo()].count = Cpu::info()->threads(); // sets default algo threads
             return true;
         }
 
@@ -277,7 +307,7 @@ bool xmrig::Config::parseUint64(int key, uint64_t arg)
     switch (key) {
     case CPUAffinityKey: /* --cpu-affinity */
         if (arg) {
-            m_threads.mask = arg;
+            m_threads[m_algorithm.algo()].mask = arg; // sets default algo threads
         }
         break;
 
@@ -289,22 +319,51 @@ bool xmrig::Config::parseUint64(int key, uint64_t arg)
 }
 
 
+// parse specific perf algo (or generic) threads config
+void xmrig::Config::parseThreadsJSON(const rapidjson::Value &threads, const xmrig::Algo algo)
+{
+    for (const rapidjson::Value &value : threads.GetArray()) {
+        if (!value.IsObject()) {
+            continue;
+        }
+
+        if (value.HasMember("low_power_mode")) {
+            auto data = CpuThread::parse(value);
+
+            if (data.valid) {
+                m_threads[algo].cpu.push_back(std::move(data));
+            }
+        }
+    }
+}
+
 void xmrig::Config::parseJSON(const rapidjson::Document &doc)
 {
     const rapidjson::Value &threads = doc["threads"];
 
     if (threads.IsArray()) {
-        for (const rapidjson::Value &value : threads.GetArray()) {
-            if (!value.IsObject()) {
-                continue;
+        // parse generic (old) threads
+        parseThreadsJSON(threads, m_algorithm.algo());
+    } else if (threads.IsObject()) {
+        // parse new specific perf algo threads
+        for (int a = 0; a != xmrig::Algo::ALGO_MAX; ++ a) {
+            const xmrig::Algo algo = static_cast<xmrig::Algo>(a);
+            const rapidjson::Value &threads2 = threads[xmrig::Algorithm::perfAlgoName(xmrig::Algorithm(algo).perf_algo())];
+            if (threads2.IsArray()) {
+                parseThreadsJSON(threads2, algo);
             }
+        }
+    }
 
-            if (value.HasMember("low_power_mode")) {
-                auto data = CpuThread::parse(value);
-
-                if (data.valid) {
-                    m_threads.cpu.push_back(std::move(data));
-                }
+    const rapidjson::Value &algo_perf = doc["algo-perf"];
+    if (algo_perf.IsObject()) {
+        for (int a = 0; a != xmrig::PerfAlgo::PA_MAX; ++ a) {
+            const xmrig::PerfAlgo pa = static_cast<xmrig::PerfAlgo>(a);
+            const rapidjson::Value &key = algo_perf[xmrig::Algorithm::perfAlgoName(pa)];
+            if (key.IsDouble()) {
+                m_algo_perf[pa] = static_cast<float>(key.GetDouble());
+            } else if (key.IsInt()) {
+                m_algo_perf[pa] = static_cast<float>(key.GetInt());
             }
         }
     }
@@ -316,7 +375,7 @@ bool xmrig::Config::parseInt(int key, int arg)
     switch (key) {
     case ThreadsKey: /* --threads */
         if (arg >= 0 && arg < 1024) {
-            m_threads.count = arg;
+            m_threads[m_algorithm.algo()].count = arg; // sets default algo threads
         }
         break;
 

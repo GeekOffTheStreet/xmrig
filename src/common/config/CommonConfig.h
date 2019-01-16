@@ -6,6 +6,7 @@
  * Copyright 2016      Jay D Dee   <jayddee246@gmail.com>
  * Copyright 2017-2018 XMR-Stak    <https://github.com/fireice-uk>, <https://github.com/psychocrypt>
  * Copyright 2016-2018 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
+ * Copyright 2018 MoneroOcean      <https://github.com/MoneroOcean>, <support@moneroocean.stream>
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -48,6 +49,8 @@ public:
     inline bool isBackground() const               { return m_background; }
     inline bool isColors() const                   { return m_colors; }
     inline bool isDryRun() const                   { return m_dryRun; }
+    inline bool isCalibrateAlgo() const            { return m_calibrateAlgo; }
+    inline int  calibrateAlgoTime() const          { return m_calibrateAlgoTime; }
     inline bool isSyslog() const                   { return m_syslog; }
     inline const char *apiId() const               { return m_apiId.data(); }
     inline const char *apiToken() const            { return m_apiToken.data(); }
@@ -57,6 +60,7 @@ public:
     inline const std::vector<Pool> &pools() const  { return m_activePools; }
     inline int apiPort() const                     { return m_apiPort; }
     inline int donateLevel() const                 { return m_donateLevel; }
+    inline void setDonateLevel(const int donate)   { m_donateLevel = donate; }
     inline int printTime() const                   { return m_printTime; }
     inline int retries() const                     { return m_retries; }
     inline int retryPause() const                  { return m_retryPause; }
@@ -93,6 +97,8 @@ protected:
     bool m_background;
     bool m_colors;
     bool m_dryRun;
+    bool m_calibrateAlgo;
+    int  m_calibrateAlgoTime;
     bool m_syslog;
     bool m_watch;
     int m_apiPort;
@@ -112,9 +118,11 @@ protected:
 
 private:
     bool parseInt(int key, int arg);
+    Pool &currentPool();
+    void fixup();
 };
 
 
 } /* namespace xmrig */
 
-#endif /* __COMMONCONFIG_H__ */
+#endif /* XMRIG_COMMONCONFIG_H */

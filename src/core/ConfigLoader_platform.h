@@ -6,6 +6,7 @@
  * Copyright 2016      Jay D Dee   <jayddee246@gmail.com>
  * Copyright 2017-2018 XMR-Stak    <https://github.com/fireice-uk>, <https://github.com/psychocrypt>
  * Copyright 2016-2018 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
+ * Copyright 2018 MoneroOcean      <https://github.com/MoneroOcean>, <support@moneroocean.stream>
  *
  *
  *   This program is free software: you can redistribute it and/or modify
@@ -54,6 +55,8 @@ Options:\n\
                              cryptonight-heavy\n"
 #endif
 "\
+  --calibrate-algo         run benchmarks before mining to measure hashrates of all supported algos\n\
+  --calibrate-algo-time=N  time in seconds to run each algo benchmark round (default: 60)\n\
   -o, --url=URL            URL of mining server\n\
   -O, --userpass=U:P       username:password pair for mining server\n\
   -u, --user=USERNAME      username for mining server\n\
@@ -84,7 +87,7 @@ Options:\n\
 "\
       --max-cpu-usage=N    maximum CPU usage for automatic threads mode (default 75)\n\
       --safe               safe adjust threads and av settings for current CPU\n\
-      --asm=ASM            ASM code for cn/2, possible values: auto, none, intel, ryzen.\n\
+      --asm=ASM            ASM code for cn/2, possible values: auto, none, intel, ryzen, bulldozer.\n\
       --print-time=N       print hashrate report every N seconds\n\
       --api-port=N         port for the miner API\n\
       --api-access-token=T access token for API\n\
@@ -116,6 +119,8 @@ static struct option const options[] = {
     { "cpu-priority",      1, nullptr, xmrig::IConfig::CPUPriorityKey    },
     { "donate-level",      1, nullptr, xmrig::IConfig::DonateLevelKey    },
     { "dry-run",           0, nullptr, xmrig::IConfig::DryRunKey         },
+    { "calibrate-algo",      0, nullptr, xmrig::IConfig::CalibrateAlgoKey      },
+    { "calibrate-algo-time", 1, nullptr, xmrig::IConfig::CalibrateAlgoTimeKey  },
     { "help",              0, nullptr, xmrig::IConfig::HelpKey           },
     { "keepalive",         0, nullptr, xmrig::IConfig::KeepAliveKey      },
     { "log-file",          1, nullptr, xmrig::IConfig::LogFileKey        },
@@ -153,6 +158,8 @@ static struct option const config_options[] = {
     { "cpu-priority",  1, nullptr, xmrig::IConfig::CPUPriorityKey },
     { "donate-level",  1, nullptr, xmrig::IConfig::DonateLevelKey },
     { "dry-run",       0, nullptr, xmrig::IConfig::DryRunKey      },
+    { "calibrate-algo",      0, nullptr, xmrig::IConfig::CalibrateAlgoKey      },
+    { "calibrate-algo-time", 1, nullptr, xmrig::IConfig::CalibrateAlgoTimeKey  },
     { "huge-pages",    0, nullptr, xmrig::IConfig::HugePagesKey   },
     { "log-file",      1, nullptr, xmrig::IConfig::LogFileKey     },
     { "max-cpu-usage", 1, nullptr, xmrig::IConfig::MaxCPUUsageKey },

@@ -5,7 +5,8 @@
  * Copyright 2014-2016 Wolf9466    <https://github.com/OhGodAPet>
  * Copyright 2016      Jay D Dee   <jayddee246@gmail.com>
  * Copyright 2017-2018 XMR-Stak    <https://github.com/fireice-uk>, <https://github.com/psychocrypt>
- * Copyright 2016-2018 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
+ * Copyright 2016-2019 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
+ * Copyright 2018-2019 MoneroOcean <https://github.com/MoneroOcean>, <support@moneroocean.stream>
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -40,6 +41,8 @@
 #include "common/log/Log.h"
 #include "common/net/Client.h"
 #include "net/JobResult.h"
+#include "core/Config.h" // for pconfig to access pconfig->get_algo_perf
+#include "workers/Workers.h" // to do Workers::switch_algo
 #include "rapidjson/document.h"
 #include "rapidjson/error/en.h"
 #include "rapidjson/stringbuffer.h"
@@ -212,6 +215,12 @@ const char *Client::tlsVersion() const
 
 int64_t Client::submit(const JobResult &result)
 {
+#   ifndef XMRIG_PROXY_PROJECT
+    if (result.clientId != m_rpcId) {
+        return -1;
+    }
+#   endif
+
     using namespace rapidjson;
 
 #   ifdef XMRIG_PROXY_PROJECT
@@ -336,8 +345,7 @@ bool Client::parseJob(const rapidjson::Value &params, int *code)
     if (params.HasMember("algo")) {
         job.setAlgorithm(params["algo"].GetString());
     }
-
-    if (params.HasMember("variant")) {
+    else if (params.HasMember("variant")) {
         const rapidjson::Value &variant = params["variant"];
 
         if (variant.IsInt()) {
@@ -354,6 +362,11 @@ bool Client::parseJob(const rapidjson::Value &params, int *code)
         close();
         return false;
     }
+
+    // retarget workers for possible new Algo profile (same algo profile is not reapplied)
+    Workers::switch_algo(job.algorithm());
+
+    m_job.setClientId(m_rpcId);
 
     if (m_job != job) {
         m_jobs++;
@@ -620,6 +633,16 @@ void Client::login()
         }
 
         params.AddMember("algo", algo, allocator);
+
+        // addding algo-perf based on pconfig->get_algo_perf
+        Value algo_perf(kObjectType);
+        for (int a = 0; a != xmrig::PerfAlgo::PA_MAX; ++ a) {
+            const xmrig::PerfAlgo pa = static_cast<xmrig::PerfAlgo>(a);
+            Value key(xmrig::Algorithm::perfAlgoName(pa), allocator);
+            algo_perf.AddMember(key, Value(xmrig::pconfig->get_algo_perf(pa)), allocator);
+        }
+
+        params.AddMember("algo-perf", algo_perf, allocator);
     }
 
     doc.AddMember("params", params, allocator);

@@ -17,6 +17,7 @@ include (cmake/cpu.cmake)
 set(HEADERS
     src/api/NetworkState.h
     src/App.h
+    src/base/tools/String.h
     src/common/config/CommonConfig.h
     src/common/config/ConfigLoader.h
     src/common/config/ConfigWatcher.h
@@ -61,6 +62,7 @@ set(HEADERS
     src/net/strategies/DonateStrategy.h
     src/Summary.h
     src/version.h
+    src/workers/Benchmark.h
     src/workers/CpuThread.h
     src/workers/Handle.h
     src/workers/Hashrate.h
@@ -93,6 +95,7 @@ endif()
 set(SOURCES
     src/api/NetworkState.cpp
     src/App.cpp
+    src/base/tools/String.cpp
     src/common/config/CommonConfig.cpp
     src/common/config/ConfigLoader.cpp
     src/common/config/ConfigWatcher.cpp
@@ -116,6 +119,7 @@ set(SOURCES
     src/net/Network.cpp
     src/net/strategies/DonateStrategy.cpp
     src/Summary.cpp
+    src/workers/Benchmark.cpp
     src/workers/CpuThread.cpp
     src/workers/Handle.cpp
     src/workers/Hashrate.cpp
@@ -155,11 +159,11 @@ else()
         src/Mem_unix.cpp
         )
 
-    set(EXTRA_LIBS pthread rt dl)
-endif()
-
-if (CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
-    set(EXTRA_LIBS ${EXTRA_LIBS} kvm)
+    if (CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
+        set(EXTRA_LIBS kvm)
+    else()
+        set(EXTRA_LIBS pthread rt dl)
+    endif()
 endif()
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -255,5 +259,5 @@ if (WITH_DEBUG_LOG)
     add_definitions(/DAPP_DEBUG)
 endif()
 
-add_executable(${PROJECT_NAME} ${HEADERS} ${SOURCES} ${SOURCES_OS} ${SOURCES_CPUID} ${HEADERS_CRYPTO} ${SOURCES_CRYPTO} ${SOURCES_SYSLOG} ${HTTPD_SOURCES} ${TLS_SOURCES} ${XMRIG_ASM_SOURCES})
-target_link_libraries(${PROJECT_NAME} ${XMRIG_ASM_LIBRARY} ${OPENSSL_LIBRARIES} ${UV_LIBRARIES} ${MHD_LIBRARY} ${EXTRA_LIBS} ${CPUID_LIB})
+add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES} ${SOURCES_OS} ${SOURCES_CPUID} ${HEADERS_CRYPTO} ${SOURCES_CRYPTO} ${SOURCES_SYSLOG} ${HTTPD_SOURCES} ${TLS_SOURCES} ${XMRIG_ASM_SOURCES})
+target_link_libraries(${CMAKE_PROJECT_NAME} ${XMRIG_ASM_LIBRARY} ${OPENSSL_LIBRARIES} ${UV_LIBRARIES} ${MHD_LIBRARY} ${EXTRA_LIBS} ${CPUID_LIB})

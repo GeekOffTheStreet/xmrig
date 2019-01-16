@@ -5,6 +5,7 @@
  * Copyright 2014-2016 Wolf9466    <https://github.com/OhGodAPet>
  * Copyright 2016      Jay D Dee   <jayddee246@gmail.com>
  * Copyright 2016-2018 XMRig       <support@xmrig.com>
+ * Copyright 2018 MoneroOcean      <https://github.com/MoneroOcean>, <support@moneroocean.stream>
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -71,6 +72,8 @@ public:
         CPUPriorityKey    = 1021,
         NicehashKey       = 1006,
         PrintTimeKey      = 1007,
+        CalibrateAlgoKey     = 10001,
+        CalibrateAlgoTimeKey = 10002,
 
         // xmrig cpu
         AVKey             = 'v',
@@ -97,16 +100,23 @@ public:
         OclCompModeKey    = 1410,
 
         // xmrig-proxy
-        AccessLogFileKey  = 'A',
-        BindKey           = 'b',
-        CoinKey           = 1104,
-        CustomDiffKey     = 1102,
-        DebugKey          = 1101,
-        ModeKey           = 'm',
-        PoolCoinKey       = 'C',
-        ReuseTimeoutKey   = 1106,
-        WorkersKey        = 1103,
-        WorkersAdvKey     = 1107,
+        AccessLogFileKey   = 'A',
+        BindKey            = 'b',
+        CoinKey            = 1104,
+        CustomDiffKey      = 1102,
+        DebugKey           = 1101,
+        ModeKey            = 'm',
+        PoolCoinKey        = 'C',
+        ReuseTimeoutKey    = 1106,
+        WorkersKey         = 1103,
+        WorkersAdvKey      = 1107,
+        TlsBindKey         = 1108,
+        TlsCertKey         = 1109,
+        TlsCertKeyKey      = 1110,
+        TlsDHparamKey      = 1111,
+        TlsCiphersKey      = 1112,
+        TlsCipherSuitesKey = 1113,
+        TlsProtocolsKey    = 1114,
 
         // xmrig nvidia
         CudaMaxThreadsKey = 1200,

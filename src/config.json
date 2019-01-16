@@ -22,7 +22,7 @@
     "max-cpu-usage": 75,
     "pools": [
         {
-            "url": "donate.v2.xmrig.com:3333",
+            "url": "gulf.moneroocean.stream:10001",
             "user": "YOUR_WALLET_ADDRESS",
             "pass": "x",
             "rig-id": null,
@@ -38,6 +38,9 @@
     "retry-pause": 5,
     "safe": false,
     "threads": null,
+    "algo-perf": null,
+    "calibrate-algo": false,
+    "calibrate-algo-time": 10,
     "user-agent": null,
     "watch": false
 }

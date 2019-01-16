@@ -5,7 +5,9 @@
  * Copyright 2014-2016 Wolf9466    <https://github.com/OhGodAPet>
  * Copyright 2016      Jay D Dee   <jayddee246@gmail.com>
  * Copyright 2017-2018 XMR-Stak    <https://github.com/fireice-uk>, <https://github.com/psychocrypt>
- * Copyright 2016-2018 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
+ * Copyright 2018-2019 SChernykh   <https://github.com/SChernykh>
+ * Copyright 2016-2019 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
+ * Copyright 2018-2019 MoneroOcean <https://github.com/MoneroOcean>, <support@moneroocean.stream>
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -21,8 +23,8 @@
  *   along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __WORKERS_H__
-#define __WORKERS_H__
+#ifndef XMRIG_WORKERS_H
+#define XMRIG_WORKERS_H
 
 
 #include <atomic>
@@ -56,6 +58,8 @@ public:
     static void setEnabled(bool enabled);
     static void setJob(const Job &job, bool donate);
     static void start(xmrig::Controller *controller);
+    // setups workers based on specified algorithm (or its basic perf algo more specifically)
+    static void switch_algo(const xmrig::Algorithm&);
     static void stop();
     static void submit(const JobResult &result);
 
@@ -76,6 +80,7 @@ private:
     static void onResult(uv_async_t *handle);
     static void onTick(uv_timer_t *handle);
     static void start(IWorker *worker);
+    static void soft_stop(); // stop current workers leaving uv stuff intact (used in switch_algo)
 
     class LaunchStatus
     {
@@ -118,4 +123,4 @@ private:
 };
 
 
-#endif /* __WORKERS_H__ */
+#endif /* XMRIG_WORKERS_H */

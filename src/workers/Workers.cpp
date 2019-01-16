@@ -5,7 +5,9 @@
  * Copyright 2014-2016 Wolf9466    <https://github.com/OhGodAPet>
  * Copyright 2016      Jay D Dee   <jayddee246@gmail.com>
  * Copyright 2017-2018 XMR-Stak    <https://github.com/fireice-uk>, <https://github.com/psychocrypt>
- * Copyright 2016-2018 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
+ * Copyright 2018-2019 SChernykh   <https://github.com/SChernykh>
+ * Copyright 2016-2019 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
+ * Copyright 2018-2019 MoneroOcean <https://github.com/MoneroOcean>, <support@moneroocean.stream>
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -24,6 +26,7 @@
 #include <cmath>
 #include <inttypes.h>
 #include <thread>
+#include <string> // for MSVS std::to_string
 
 
 #include "api/Api.h"
@@ -168,6 +171,10 @@ void Workers::start(xmrig::Controller *controller)
     LOG_NOTICE("--------------------------------------------------------------------------");
 #   endif
 
+#   ifndef XMRIG_NO_ASM
+    xmrig::CpuThread::patchAsmVariants();
+#   endif
+
     m_controller = controller;
 
     const std::vector<xmrig::IThread *> &threads = controller->config()->threads();
@@ -206,6 +213,65 @@ void Workers::start(xmrig::Controller *controller)
     }
 }
 
+void Workers::soft_stop() // stop current workers leaving uv stuff intact (used in switch_algo)
+{
+    m_sequence = 0;
+    m_paused   = 0;
+
+    for (Handle *handle : m_workers) {
+        handle->join();
+        delete handle;
+    }
+
+    m_workers.clear();
+}
+
+// setups workers based on specified algorithm (or its basic perf algo more specifically)
+void Workers::switch_algo(const xmrig::Algorithm& algorithm)
+{
+    if (m_status.algo == algorithm.algo()) return;
+
+    soft_stop();
+
+    m_sequence = 1;
+    m_paused   = 1;
+
+    const std::vector<xmrig::IThread *> &threads = m_controller->config()->threads(algorithm.algo());
+    m_status.algo    = algorithm.algo();
+    m_status.threads = threads.size();
+
+    // string with multiway thread info
+    std::string str_threads;
+    for (const xmrig::IThread *thread : threads) {
+       if (!str_threads.empty()) str_threads = str_threads + ", ";
+       str_threads = str_threads + "x" + std::to_string(thread->multiway());
+    }
+    Log::i()->text(m_controller->config()->isColors()
+        ? GREEN_BOLD(" >>> ") WHITE_BOLD("ALGO CHANGE: ") CYAN_BOLD("%s") ", " CYAN_BOLD("%d (%s)") " thread(s)"
+        : " >>> ALGO CHANGE: %s, %d (%s) thread(s)",
+        algorithm.name(),
+        threads.size(),
+        str_threads.c_str()
+    );
+
+    m_status.ways = 0;
+    for (const xmrig::IThread *thread : threads) {
+       m_status.ways += thread->multiway();
+    }
+
+    m_hashrate->set_threads(threads.size());
+
+    uint32_t offset = 0;
+
+    for (xmrig::IThread *thread : threads) {
+        Handle *handle = new Handle(thread, offset, m_status.ways);
+        offset += thread->multiway();
+
+        m_workers.push_back(handle);
+        handle->start(Workers::onReady);
+    }
+}
+
 
 void Workers::stop()
 {
@@ -216,8 +282,8 @@ void Workers::stop()
     m_paused   = 0;
     m_sequence = 0;
 
-    for (size_t i = 0; i < m_workers.size(); ++i) {
-        m_workers[i]->join();
+    for (Handle *handle : m_workers) {
+        handle->join();
     }
 }
 
