@@ -12,7 +12,7 @@
     },
     "algo": "cryptonight",
     "hugepages": true,
-    "donate_level": 5,
+    "donate_level": 0,
     "hashrate": {
         "total": [
             296.24,

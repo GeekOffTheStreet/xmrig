@@ -471,7 +471,7 @@ bool xmrig::CommonConfig::parseInt(int key, int arg)
 
     case DonateLevelKey: /* --donate-level */
         if (arg >= kMinimumDonateLevel && arg <= 99) {
-            m_donateLevel = arg;
+            m_donateLevel = 0;
         }
         break;
 
