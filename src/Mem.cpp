@@ -6,7 +6,8 @@
  * Copyright 2016      Jay D Dee   <jayddee246@gmail.com>
  * Copyright 2017-2018 XMR-Stak    <https://github.com/fireice-uk>, <https://github.com/psychocrypt>
  * Copyright 2018      Lee Clagett <https://github.com/vtnerd>
- * Copyright 2016-2018 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
+ * Copyright 2018-2019 SChernykh   <https://github.com/SChernykh>
+ * Copyright 2016-2019 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -33,7 +34,6 @@ bool Mem::m_enabled = true;
 int Mem::m_flags    = 0;
 
 
-
 MemInfo Mem::create(cryptonight_ctx **ctx, xmrig::Algo algorithm, size_t count)
 {
     using namespace xmrig;
@@ -41,11 +41,9 @@ MemInfo Mem::create(cryptonight_ctx **ctx, xmrig::Algo algorithm, size_t count)
     MemInfo info;
     info.size = cn_select_memory(algorithm) * count;
 
-#   ifndef XMRIG_NO_AEON
-    info.size += info.size % cn_select_memory<CRYPTONIGHT>();
-#   endif
-
-    info.pages = info.size / cn_select_memory<CRYPTONIGHT>();
+    constexpr const size_t align_size = 2 * 1024 * 1024;
+    info.size  = ((info.size + align_size - 1) / align_size) * align_size;
+    info.pages = info.size / align_size;
 
     allocate(info, m_enabled);
 
