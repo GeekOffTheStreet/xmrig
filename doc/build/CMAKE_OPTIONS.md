@@ -21,6 +21,8 @@ This feature add external dependency to libhwloc (1.10.0+) (except MSVC builds).
 * **`-DWITH_TLS=OFF`** disable SSL/TLS support (secure connections to pool). This feature add external dependency to OpenSSL.
 * **`-DWITH_ASM=OFF`** disable assembly optimizations for modern CryptoNight algorithms.
 * **`-DWITH_EMBEDDED_CONFIG=ON`** Enable [embedded](https://github.com/xmrig/xmrig/issues/957) config support.
+* **`-DWITH_OPENCL=OFF`** Disable OpenCL backend.
+* **`-DWITH_CUDA=OFF`** Disable CUDA backend.
 
 ## Debug options
 
@@ -30,7 +32,7 @@ This feature add external dependency to libhwloc (1.10.0+) (except MSVC builds).
 
 ## Special build options
 
-* **`-DXMRIG_DEPS=<path>`** path to precompiled dependensices https://github.com/xmrig/xmrig-deps
+* **`-DXMRIG_DEPS=<path>`** path to precompiled dependencies https://github.com/xmrig/xmrig-deps
 * **`-DARM_TARGET=<number>`** override ARM target, possible values `7` (ARMv7) and `8` (ARMv8).
 * **`-DUV_INCLUDE_DIR=<path>`** custom path to libuv headers.
 * **`-DUV_LIBRARY=<path>`** custom path to libuv library.
