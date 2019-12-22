@@ -27,6 +27,7 @@
 
 #include "crypto/rx/Rx.h"
 #include "backend/common/Tags.h"
+#include "backend/cpu/CpuConfig.h"
 #include "base/io/log/Log.h"
 #include "crypto/rx/RxConfig.h"
 #include "crypto/rx/RxQueue.h"
@@ -38,8 +39,9 @@ namespace xmrig {
 class RxPrivate;
 
 
-static const char *tag  = BLUE_BG(WHITE_BOLD_S " rx  ") " ";
-static RxPrivate *d_ptr = nullptr;
+static bool osInitialized   = false;
+static const char *tag      = BLUE_BG(WHITE_BOLD_S " rx  ") " ";
+static RxPrivate *d_ptr     = nullptr;
 
 
 class RxPrivate
@@ -60,7 +62,7 @@ const char *xmrig::rx_tag()
 }
 
 
-bool xmrig::Rx::init(const Job &job, const RxConfig &config, bool hugePages)
+bool xmrig::Rx::init(const Job &job, const RxConfig &config, const CpuConfig &cpu)
 {
     if (job.algorithm().family() != Algorithm::RANDOM_X) {
         return true;
@@ -70,7 +72,12 @@ bool xmrig::Rx::init(const Job &job, const RxConfig &config, bool hugePages)
         return true;
     }
 
-    d_ptr->queue.enqueue(job, config.nodeset(), config.threads(), hugePages, config.mode());
+    if (!osInitialized) {
+        msrInit(config);
+        osInitialized = true;
+    }
+
+    d_ptr->queue.enqueue(job, config.nodeset(), config.threads(cpu.limit()), cpu.isHugePages(), config.isOneGbPages(), config.mode(), cpu.priority());
 
     return false;
 }
@@ -82,20 +89,24 @@ bool xmrig::Rx::isReady(const Job &job)
 }
 
 
+xmrig::HugePagesInfo xmrig::Rx::hugePages()
+{
+    return d_ptr->queue.hugePages();
+}
+
+
 xmrig::RxDataset *xmrig::Rx::dataset(const Job &job, uint32_t nodeId)
 {
     return d_ptr->queue.dataset(job, nodeId);
 }
 
 
-std::pair<uint32_t, uint32_t> xmrig::Rx::hugePages()
-{
-    return d_ptr->queue.hugePages();
-}
-
-
 void xmrig::Rx::destroy()
 {
+    if (osInitialized) {
+        msrDestroy();
+    }
+
     delete d_ptr;
 
     d_ptr = nullptr;
@@ -106,3 +117,18 @@ void xmrig::Rx::init(IRxListener *listener)
 {
     d_ptr = new RxPrivate(listener);
 }
+
+
+#ifndef XMRIG_FEATURE_MSR
+void xmrig::Rx::msrInit(const RxConfig &)
+{
+}
+
+
+void xmrig::Rx::msrDestroy()
+{
+}
+#endif
+
+
+
