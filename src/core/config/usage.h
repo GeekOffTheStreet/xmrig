@@ -5,8 +5,8 @@
  * Copyright 2014-2016 Wolf9466    <https://github.com/OhGodAPet>
  * Copyright 2016      Jay D Dee   <jayddee246@gmail.com>
  * Copyright 2017-2018 XMR-Stak    <https://github.com/fireice-uk>, <https://github.com/psychocrypt>
- * Copyright 2018-2019 SChernykh   <https://github.com/SChernykh>
- * Copyright 2016-2019 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
+ * Copyright 2018-2020 SChernykh   <https://github.com/SChernykh>
+ * Copyright 2016-2020 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -50,6 +50,7 @@ static inline const std::string &usage()
     u += "  -u, --user=USERNAME           username for mining server\n";
     u += "  -p, --pass=PASSWORD           password for mining server\n";
     u += "  -O, --userpass=U:P            username:password pair for mining server\n";
+    u += "  -x, --proxy=HOST:PORT         connect through a SOCKS5 proxy";
     u += "  -k, --keepalive               send keepalived packet for prevent timeout (needs pool support)\n";
     u += "      --nicehash                enable nicehash.com support\n";
     u += "      --rig-id=ID               rig identifier for pool-side statistics (needs pool support)\n";
@@ -91,6 +92,10 @@ static inline const std::string &usage()
     u += "      --randomx-1gb-pages       use 1GB hugepages for dataset (Linux only)\n";
     u += "      --randomx-wrmsr=N         write custom value (0-15) to Intel MSR register 0x1a4 or disable MSR mod (-1)\n";
     u += "      --randomx-no-rdmsr        disable reverting initial MSR values on exit\n";
+#   endif
+
+#   ifdef XMRIG_ALGO_ASTROBWT
+    u += "      --astrobwt-max-size=N     skip hashes with large stage 2 size, default: 550, min: 400, max: 1200\n";
 #   endif
 
 #   ifdef XMRIG_FEATURE_HTTP

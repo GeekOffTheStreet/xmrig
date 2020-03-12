@@ -5,8 +5,8 @@
  * Copyright 2014-2016 Wolf9466    <https://github.com/OhGodAPet>
  * Copyright 2016      Jay D Dee   <jayddee246@gmail.com>
  * Copyright 2017-2018 XMR-Stak    <https://github.com/fireice-uk>, <https://github.com/psychocrypt>
- * Copyright 2018-2019 SChernykh   <https://github.com/SChernykh>
- * Copyright 2016-2019 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
+ * Copyright 2018-2020 SChernykh   <https://github.com/SChernykh>
+ * Copyright 2016-2020 XMRig       <https://github.com/xmrig>, <support@xmrig.com>
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -38,7 +38,6 @@
 namespace xmrig {
 
 static const char *kAuthorization = "authorization";
-static const char *kContentType   = "content-type";
 
 #ifdef _WIN32
 static const char *favicon = nullptr;
@@ -54,6 +53,8 @@ xmrig::Httpd::Httpd(Base *base) :
     m_server(nullptr),
     m_port(0)
 {
+    m_httpListener = std::make_shared<HttpListener>(this);
+
     base->addListener(this);
 }
 
@@ -69,7 +70,7 @@ bool xmrig::Httpd::start()
         return true;
     }
 
-    m_http   = new HttpServer(this);
+    m_http   = new HttpServer(m_httpListener);
     m_server = new TcpServer(config.host(), config.port(), m_http);
 
     const int rc = m_server->bind();
@@ -136,7 +137,7 @@ void xmrig::Httpd::onHttpData(const HttpData &data)
 #       ifdef _WIN32
         if (favicon != nullptr) {
             HttpResponse response(data.id());
-            response.setHeader("Content-Type", "image/x-icon");
+            response.setHeader(HttpData::kContentType, "image/x-icon");
 
             return response.end(favicon, faviconSize);
         }
@@ -159,7 +160,7 @@ void xmrig::Httpd::onHttpData(const HttpData &data)
             return HttpApiResponse(data.id(), HTTP_STATUS_FORBIDDEN).end();
         }
 
-        if (!data.headers.count(kContentType) || data.headers.at(kContentType) != "application/json") {
+        if (!data.headers.count(HttpData::kContentTypeL) || data.headers.at(HttpData::kContentTypeL) != HttpData::kApplicationJson) {
             return HttpApiResponse(data.id(), HTTP_STATUS_UNSUPPORTED_MEDIA_TYPE).end();
         }
     }
