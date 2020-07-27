@@ -26,7 +26,7 @@
 #define XMRIG_ICONFIG_H
 
 
-#include "rapidjson/fwd.h"
+#include "3rdparty/rapidjson/fwd.h"
 
 
 namespace xmrig {
@@ -74,6 +74,8 @@ public:
         DaemonPollKey        = 1019,
         SelfSelectKey        = 1028,
         DataDirKey           = 1035,
+        TitleKey             = 1037,
+        NoTitleKey           = 1038,
 
         // xmrig common
         CPUPriorityKey       = 1021,

@@ -24,13 +24,15 @@
 
 
 #include "base/kernel/config/BaseConfig.h"
+#include "3rdparty/rapidjson/document.h"
 #include "base/io/json/Json.h"
 #include "base/io/log/Log.h"
+#include "base/io/log/Tags.h"
 #include "base/kernel/interfaces/IJsonReader.h"
-#include "rapidjson/document.h"
 #include "version.h"
 
 
+#include <algorithm>
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
@@ -61,6 +63,7 @@ const char *BaseConfig::kHttp           = "http";
 const char *BaseConfig::kLogFile        = "log-file";
 const char *BaseConfig::kPrintTime      = "print-time";
 const char *BaseConfig::kSyslog         = "syslog";
+const char *BaseConfig::kTitle          = "title";
 const char *BaseConfig::kUserAgent      = "user-agent";
 const char *BaseConfig::kVerbose        = "verbose";
 const char *BaseConfig::kWatch          = "watch";
@@ -89,13 +92,14 @@ bool xmrig::BaseConfig::read(const IJsonReader &reader, const char *fileName)
     m_watch        = reader.getBool(kWatch, m_watch);
     m_logFile      = reader.getString(kLogFile);
     m_userAgent    = reader.getString(kUserAgent);
+    m_printTime    = std::min(reader.getUint(kPrintTime, m_printTime), 3600U);
+    m_title        = reader.getValue(kTitle);
 
 #   ifdef XMRIG_FEATURE_TLS
     m_tls = reader.getValue(kTls);
 #   endif
 
     Log::setColors(reader.getBool(kColors, Log::isColors()));
-    setPrintTime(reader.getUint(kPrintTime, 60));
     setVerbose(reader.getValue(kVerbose));
 
     const auto &api = reader.getObject(kApi);
@@ -121,7 +125,7 @@ bool xmrig::BaseConfig::save()
     getJSON(doc);
 
     if (Json::save(m_fileName, doc)) {
-        LOG_NOTICE("configuration saved to: \"%s\"", m_fileName.data());
+        LOG_NOTICE("%s " WHITE_BOLD("configuration saved to: \"%s\""), Tags::config(), m_fileName.data());
         return true;
     }
 
