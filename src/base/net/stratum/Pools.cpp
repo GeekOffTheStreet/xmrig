@@ -32,6 +32,11 @@
 #include "donate.h"
 
 
+#ifdef XMRIG_FEATURE_BENCHMARK
+#   include "base/net/stratum/benchmark/BenchConfig.h"
+#endif
+
+
 namespace xmrig {
 
 
@@ -118,6 +123,15 @@ void xmrig::Pools::load(const IJsonReader &reader)
 {
     m_data.clear();
 
+#   ifdef XMRIG_FEATURE_BENCHMARK
+    m_benchmark = std::shared_ptr<BenchConfig>(BenchConfig::create(reader.getObject(BenchConfig::kBenchmark)));
+    if (m_benchmark) {
+        m_data.emplace_back(m_benchmark);
+
+        return;
+    }
+#   endif
+
     const rapidjson::Value &pools = reader.getArray(kPools);
     if (!pools.IsArray()) {
         return;
@@ -138,6 +152,16 @@ void xmrig::Pools::load(const IJsonReader &reader)
     setProxyDonate(reader.getInt(kDonateOverProxy, PROXY_DONATE_AUTO));
     setRetries(reader.getInt(kRetries));
     setRetryPause(reader.getInt(kRetryPause));
+}
+
+
+uint32_t xmrig::Pools::benchSize() const
+{
+#   ifdef XMRIG_FEATURE_BENCHMARK
+    return m_benchmark ? m_benchmark->size() : 0;
+#   else
+    return 0;
+#   endif    
 }
 
 
