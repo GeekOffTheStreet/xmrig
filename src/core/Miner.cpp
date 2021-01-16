@@ -38,12 +38,10 @@
 #include "base/kernel/Platform.h"
 #include "base/net/stratum/Job.h"
 #include "base/tools/Object.h"
-#include "base/tools/Profiler.h"
 #include "base/tools/Timer.h"
 #include "core/config/Config.h"
 #include "core/Controller.h"
 #include "crypto/common/Nonce.h"
-#include "crypto/rx/Rx.h"
 #include "version.h"
 
 
@@ -64,6 +62,8 @@
 
 
 #ifdef XMRIG_ALGO_RANDOMX
+#   include "crypto/rx/Profiler.h"
+#   include "crypto/rx/Rx.h"
 #   include "crypto/rx/RxConfig.h"
 #endif
 
@@ -163,7 +163,7 @@ public:
 
         reply.AddMember("version",      APP_VERSION, allocator);
         reply.AddMember("kind",         APP_KIND, allocator);
-        reply.AddMember("ua",           StringRef(Platform::userAgent()), allocator);
+        reply.AddMember("ua",           Platform::userAgent().toJSON(), allocator);
         reply.AddMember("cpu",          Cpu::toJSON(doc), allocator);
         reply.AddMember("donate_level", controller->config()->pools().donateLevel(), allocator);
         reply.AddMember("paused",       !enabled, allocator);
@@ -203,7 +203,7 @@ public:
                 continue;
             }
 
-            for (size_t i = 1; i < hr->threads(); i++) {
+            for (size_t i = 0; i < hr->threads(); i++) {
                 Value thread(kArrayType);
                 thread.PushBack(Hashrate::normalize(hr->calc(i, Hashrate::ShortInterval)),  allocator);
                 thread.PushBack(Hashrate::normalize(hr->calc(i, Hashrate::MediumInterval)), allocator);
@@ -254,6 +254,8 @@ public:
             return strcmp(a->m_threadId, b->m_threadId) < 0;
         });
 
+        std::map<std::string, std::pair<uint32_t, double>> averageTime;
+
         for (uint32_t i = 0; i < n;)
         {
             uint32_t n1 = i;
@@ -267,18 +269,26 @@ public:
 
             for (uint32_t j = i; j < n1; ++j) {
                 ProfileScopeData* p = data[j];
+                const double t = p->m_totalCycles / p->m_totalSamples * 1e9 / ProfileScopeData::s_tscSpeed;
                 LOG_INFO("%s Thread %6s | %-30s | %7.3f%% | %9.0f ns",
                     Tags::profiler(),
                     p->m_threadId,
                     p->m_name,
                     p->m_totalCycles * 100.0 / data[i]->m_totalCycles,
-                    p->m_totalCycles / p->m_totalSamples * 1e9 / ProfileScopeData::s_tscSpeed
+                    t
                 );
+                auto& value = averageTime[p->m_name];
+                ++value.first;
+                value.second += t;
             }
 
             LOG_INFO("%s --------------|--------------------------------|----------|-------------", Tags::profiler());
 
             i = n1;
+        }
+
+        for (auto& data : averageTime) {
+            LOG_INFO("%s %-30s %9.1f ns", Tags::profiler(), data.first.c_str(), data.second.second / data.second.first);
         }
 #       endif
     }
