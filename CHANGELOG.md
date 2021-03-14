@@ -1,3 +1,38 @@
+# v6.10.0
+- [#2122](https://github.com/xmrig/xmrig/pull/2122) Fixed pause logic when both pause on battery and user activity are enabled.
+- [#2123](https://github.com/xmrig/xmrig/issues/2123) Fixed compatibility with gcc 4.8.
+- [#2147](https://github.com/xmrig/xmrig/pull/2147) Fixed many `new job` messages when solo mining.
+- [#2150](https://github.com/xmrig/xmrig/pull/2150) Updated `sse2neon.h` to the latest master, fixes build on ARMv7.
+- [#2157](https://github.com/xmrig/xmrig/pull/2157) Fixed crash in `cn-heavy` on Zen3 with manual thread count.
+- Fixed possible out of order write to log file.
+- [http-parser](https://github.com/nodejs/http-parser) replaced to [llhttp](https://github.com/nodejs/llhttp).
+- For official builds: libuv, hwloc and OpenSSL updated to latest versions.
+
+# v6.9.0
+- [#2104](https://github.com/xmrig/xmrig/pull/2104) Added [pause-on-active](https://xmrig.com/docs/miner/config/misc#pause-on-active) config option and `--pause-on-active=N` command line option.
+- [#2112](https://github.com/xmrig/xmrig/pull/2112) Added support for [Tari merge mining](https://github.com/tari-project/tari/blob/development/README.md#tari-merge-mining).
+- [#2117](https://github.com/xmrig/xmrig/pull/2117) Fixed crash when GPU mining `cn-heavy` on Zen3 system.
+
+# v6.8.2
+- [#2080](https://github.com/xmrig/xmrig/pull/2080) Fixed compile error in Termux.
+- [#2089](https://github.com/xmrig/xmrig/pull/2089) Optimized CryptoNight-Heavy for Zen3, 7-8% speedup.
+
+# v6.8.1
+- [#2064](https://github.com/xmrig/xmrig/pull/2064) Added documentation for config.json CPU options.
+- [#2066](https://github.com/xmrig/xmrig/issues/2066) Fixed AMD GPUs health data readings on Linux.
+- [#2067](https://github.com/xmrig/xmrig/pull/2067) Fixed compilation error when RandomX and Argon2 are disabled.
+- [#2076](https://github.com/xmrig/xmrig/pull/2076) Added support for flexible huge page sizes on Linux.
+- [#2077](https://github.com/xmrig/xmrig/pull/2077) Fixed `illegal instruction` crash on ARM.
+
+# v6.8.0
+- [#2052](https://github.com/xmrig/xmrig/pull/2052) Added DMI/SMBIOS reader.
+  - Added information about memory modules on the miner startup and for online benchmark.
+  - Added new HTTP API endpoint: `GET /2/dmi`.
+  - Added new command line option `--no-dmi` or config option `"dmi"`.
+  - Added new CMake option `-DWITH_DMI=OFF`.
+- [#2057](https://github.com/xmrig/xmrig/pull/2057) Improved MSR subsystem code quality.
+- [#2058](https://github.com/xmrig/xmrig/pull/2058) RandomX JIT x86: removed unnecessary instructions.
+
 # v6.7.2
 - [#2039](https://github.com/xmrig/xmrig/pull/2039) Fixed solo mining.
 
